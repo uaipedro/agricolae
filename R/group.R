@@ -9,7 +9,11 @@
 #' coordinate axes.
 #' 
 #' @param x Object created by a test of comparison
-#' @param variation in lines by range, IQR, standard deviation or error
+#' @param variation in lines by range, IQR, standard deviation, standard error,
+#'   \code{"HSD"} for Tukey HSD semi-amplitude (MSD/2), \code{"Waller"} for
+#'   Waller-Duncan semi-amplitude (CriticalDifference/2), or \code{"Scheffe"}
+#'   for Scheffe semi-amplitude (CriticalDifference/2); in all three cases
+#'   non-overlapping bars indicate a statistically significant difference
 #' @param horiz Horizontal or vertical image
 #' @param col line colors
 #' @param xlim optional, axis x limits
@@ -40,7 +44,7 @@
 #' #endgraph
 #' 
 #' 
-plot.group<-function(x,variation=c("range","IQR","SE","SD"), horiz=FALSE,
+plot.group<-function(x,variation=c("range","IQR","SE","SD","HSD","Waller","Scheffe"), horiz=FALSE,
                      col=NULL,xlim=NULL,ylim=NULL,main=NULL,cex=NULL,hy=0,...){
   
   if(class(x) != "group"){
@@ -57,7 +61,8 @@ plot.group<-function(x,variation=c("range","IQR","SE","SD"), horiz=FALSE,
   names(y)<-rownames(z)
   groups<-x$groups[,2]
   n<-length(y)
-  colores<-as.numeric(groups)
+  colores<-as.factor(groups)
+  colores<-as.numeric(colores)
   if(is.null(col)) {
     seqcol<-c(30,34,51,24,654,31,48,6,12,586,137,12,53,387,19,22,23,401, 
               430,115,413,417,420,423,425,428,450,453,455,459,460,465,471,474,477, 
@@ -88,13 +93,55 @@ plot.group<-function(x,variation=c("range","IQR","SE","SD"), horiz=FALSE,
   }  
   if( variation=="SE" ) {
   	if("std" %in% names(z)){
-        std.err<-z$"std"/sqrt(z$"r") 
+        std.err<-z$"std"/sqrt(z$"r")
         nivel0<-y-std.err
   	nivel1<-y+std.err
   	title<-"Standard error"
   	}
   	else return("For variation use IQR or range")
-  }	
+  }
+  if( variation=="HSD" ) {
+    if(!("MSD" %in% names(x$statistics))) {
+      warning("MSD not found in $statistics (unbalanced design?). Falling back to SE.")
+      std.err <- z$"std"/sqrt(z$"r")
+      nivel0  <- y - std.err
+      nivel1  <- y + std.err
+      title   <- "Standard error"
+    } else {
+      semi   <- x$statistics$MSD / 2
+      nivel0 <- y - semi
+      nivel1 <- y + semi
+      title  <- "Tukey HSD"
+    }
+  }
+  if( variation=="Waller" ) {
+    if(!("CriticalDifference" %in% names(x$statistics))) {
+      warning("CriticalDifference not found in $statistics (unbalanced design?). Falling back to SE.")
+      std.err <- z$"std"/sqrt(z$"r")
+      nivel0  <- y - std.err
+      nivel1  <- y + std.err
+      title   <- "Standard error"
+    } else {
+      semi   <- x$statistics$CriticalDifference / 2
+      nivel0 <- y - semi
+      nivel1 <- y + semi
+      title  <- "Waller-Duncan"
+    }
+  }
+  if( variation=="Scheffe" ) {
+    if(!("CriticalDifference" %in% names(x$statistics))) {
+      warning("CriticalDifference not found in $statistics (unbalanced design?). Falling back to SE.")
+      std.err <- z$"std"/sqrt(z$"r")
+      nivel0  <- y - std.err
+      nivel1  <- y + std.err
+      title   <- "Standard error"
+    } else {
+      semi   <- x$statistics$CriticalDifference / 2
+      nivel0 <- y - semi
+      nivel1 <- y + semi
+      title  <- "Scheffe"
+    }
+  }
   if(is.null(main))main=paste("Groups and",title)
   
   top<-1.2*max(nivel1)
